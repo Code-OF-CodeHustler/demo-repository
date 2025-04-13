@@ -1,7 +1,6 @@
 // Main Application Class
 class ExpenseTracker {
     constructor() {
-
         this.currentUser = null;
         this.defaultSettings = {
             enableNotifications: true,
@@ -44,9 +43,10 @@ class ExpenseTracker {
 
     setupEventListeners() {
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
-document.getElementById('closeSettingsBtn').addEventListener('click', () => this.closeSettings());
-document.getElementById('cancelSettingsBtn').addEventListener('click', () => this.closeSettings());
-document.getElementById('settingsForm').addEventListener('submit', (e) => this.handleSettingsSubmit(e));
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => this.closeSettings());
+        document.getElementById('cancelSettingsBtn').addEventListener('click', () => this.closeSettings());
+        document.getElementById('settingsForm').addEventListener('submit', (e) => this.handleSettingsSubmit(e));
+        
         // Welcome page events
         document.getElementById('getStartedBtn').addEventListener('click', () => {
             document.getElementById('welcomePage').classList.add('hidden');
@@ -780,35 +780,55 @@ document.getElementById('settingsForm').addEventListener('submit', (e) => this.h
             };
             transactions.push(newTransaction);
         }
-        const settings = this.getUserSettings();
-if (settings.enableNotifications) {
-    // Check single expense threshold
-    if (type === 'expense' && amount > settings.expenseThreshold) {
-        this.showNotification(
-            `⚠️ High expense alert! $${amount} exceeds your threshold of $${settings.expenseThreshold}`,
-            'error'
-        );
-    }
-        // Check category budget threshold
-    const category = this.getCategoryByName(category);
-    if (category?.budgetLimit) {
-        const categoryTotal = this.getCategoryTotal(category.name);
-        const percentage = (categoryTotal / category.budgetLimit) * 100;
-        
-        if (percentage >= settings.budgetThreshold) {
-            this.showNotification(
-                `⚠️ ${category.name} budget reached ${Math.round(percentage)}% of limit!`,
-                'error'
-            );
-        }
-    }
-    
+
         localStorage.setItem('expenseTrackerTransactions', JSON.stringify(transactions));
+        
+        const settings = this.getUserSettings();
+        if (settings.enableNotifications) {
+            // Check single expense threshold
+            if (type === 'expense' && amount > settings.expenseThreshold) {
+                this.showNotification(
+                    `⚠️ High expense alert! $${amount} exceeds your threshold of $${settings.expenseThreshold}`,
+                    'error'
+                );
+            }
+            
+            // Check category budget threshold
+            const categoryObj = this.getCategoryByName(category);
+            if (categoryObj?.budgetLimit) {
+                const categoryTotal = this.getCategoryTotal(categoryObj.name);
+                const percentage = (categoryTotal / categoryObj.budgetLimit) * 100;
+                
+                if (percentage >= settings.budgetThreshold) {
+                    this.showNotification(
+                        `⚠️ ${categoryObj.name} budget reached ${Math.round(percentage)}% of limit!`,
+                        'error'
+                    );
+                }
+            }
+        }
+        
         this.loadUserData();
         this.closeModal();
         this.showNotification('Transaction saved successfully!', 'success');
     }
+
+    getCategoryByName(name) {
+        const categories = JSON.parse(localStorage.getItem('expenseTrackerCategories')) || [];
+        return categories.find(c => c.name === name && c.userId === this.currentUser.id);
     }
+
+    getCategoryTotal(categoryName) {
+        const transactions = JSON.parse(localStorage.getItem('expenseTrackerTransactions')) || [];
+        return transactions
+            .filter(t => 
+                t.userId === this.currentUser.id && 
+                t.type === 'expense' && 
+                t.category === categoryName
+            )
+            .reduce((sum, t) => sum + t.amount, 0);
+    }
+
     async handleCategorySubmit(e) {
         e.preventDefault();
         
